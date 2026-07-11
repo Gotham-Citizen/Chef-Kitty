@@ -1,6 +1,6 @@
 
 
-export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, ref}) {
+export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef}) {
     const IngredientsListItems = ingredients.map((ingredientItem, index) => (
       <li key={`${ingredientItem}-${index}`}>
         {ingredientItem}
@@ -22,7 +22,7 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
       </ul>
       {ingredients.length > 3 ? 
       <div className="get-recipe-container">
-        <div ref={ref}>
+        <div ref={sectionRef}>
           <h3>Ready for a recipe?</h3>
           <p>Generate a recipe from your list of ingredients. </p>
         </div>
