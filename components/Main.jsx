@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import ClaudeRecipe from "./ClaudeRecipe"
 import IngredientsList from "./IngredientsList"
 import { getRecipeFromGroq } from "../src/ai"
@@ -8,11 +8,22 @@ export default function Main() {
   const [ingredients, setIngredients] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
-  const recipeSection = React.useRef(null)
+  const recipeSection = useRef(null)
+
+  function isValidIngredient(str) {
+    const trimmed = str.trim()
+    if (trimmed.length < 2) return false
+    if (!/\p{L}/u.test(trimmed)) return false
+    if (/^\d+$/.test(trimmed)) return false
+    return true
+  }
 
   function addIngredient(formData) {
     const newIngredient = formData.get("ingredient")
-    if (!newIngredient.trim()) return
+    if (!isValidIngredient(newIngredient)) {
+      setError("Please enter a valid food ingredient (e.g. oregano, chicken)")
+      return
+    }
     setIngredients(prevIngredients => [...prevIngredients, newIngredient.trim()])
   }
 
@@ -20,7 +31,7 @@ export default function Main() {
     setIngredients(prevIngredients => prevIngredients.filter((_, i) => i !== index))
   }
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (recipeSection.current && recipe)
       recipeSection.current.scrollIntoView({behavior: "smooth"})
   }, [recipe])
@@ -52,7 +63,7 @@ export default function Main() {
     </form>
     {ingredients.length ? 
     <IngredientsList 
-      ref={recipeSection} 
+      sectionRef={recipeSection} 
       ingredients={ingredients} 
       getRecipe={getRecipe} 
       removeIngredient={removeIngredient}
@@ -66,7 +77,7 @@ export default function Main() {
     {error && (
       <section className="error-container" aria-live="assertive">
         <p className="error-message">{error}</p>
-        <button onClick={() => setError("")}>Dismiss</button>
+        <button onClick={() => setError("")}>Close</button>
       </section>
     )}
     {recipe ? <ClaudeRecipe recipe={recipe} /> : null}

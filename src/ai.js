@@ -1,7 +1,6 @@
 const WORKER_URL = import.meta.env.VITE_WORKER_URL
 
 export async function getRecipeFromGroq(ingredientsArr) {
-    const ingredientsString = ingredientsArr.join(", ")
     try {
         const response = await fetch(WORKER_URL, {
             method: "POST",

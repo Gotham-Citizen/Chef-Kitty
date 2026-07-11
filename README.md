@@ -16,15 +16,23 @@ Click the image above or [here](https://gotham-citizen.github.io/Chef-Claude/) t
 
 1. Type ingredients into the form and add them to your list.
 2. Once you have at least 4 ingredients, click **Get a recipe**.
-3. The app sends your ingredients to the Groq API (`llama-3.3-70b-versatile`).
+3. The app sends your ingredients to a Cloudflare Worker, which proxies the request to the Groq API (`llama-3.3-70b-versatile`).
 4. A markdown-formatted recipe is returned and rendered on the page.
 
 ## Tech Stack
 
+### Frontend
+
 - **React 19** — UI components and hooks
 - **Vite** — dev server and build tooling
-- **Groq SDK** — AI recipe generation via `llama-3.3-70b-versatile`
 - **react-markdown** — renders the AI's markdown response as styled HTML
+
+### Backend / Infrastructure
+
+- **Groq REST API** — AI recipe generation via direct `fetch` to `llama-3.3-70b-versatile` (no SDK)
+- **Cloudflare Workers** — serverless API proxy (keeps the Groq API key server-side)
+- **Wrangler** — Cloudflare Workers CLI for local dev and deployment
+- **GitHub Actions** — CI/CD pipeline to build and deploy to GitHub Pages
 
 ## Getting Started
 
@@ -42,7 +50,37 @@ npm install
 Create a `.env` file in the project root:
 
 ```
-VITE_GROQ_API_KEY=your_api_key_here
+VITE_WORKER_URL=https://your-worker-url.workers.dev
+```
+
+### Local Worker Setup
+
+The Groq API key lives in the Cloudflare Worker, never on the client.
+
+1. Navigate to the `worker/` directory and create a `.dev.vars` file:
+
+```
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+2. Start the Worker locally:
+
+```bash
+npx wrangler dev
+```
+
+3. In the project root, set `VITE_WORKER_URL` in `.env` to `http://localhost:8787`.
+
+### Deploy the Worker
+
+```bash
+npx wrangler deploy
+```
+
+Then set `GROQ_API_KEY` as a secret:
+
+```bash
+npx wrangler secret put GROQ_API_KEY
 ```
 
 ### Run Locally
@@ -63,21 +101,32 @@ npm run preview
 ## Project Structure
 
 ```
-├── index.html              # HTML shell
+├── index.html                  # HTML shell
+├── vite.config.js              # Vite configuration
+├── eslint.config.js            # ESLint flat config
 ├── src/
-│   ├── index.jsx           # React mount point
-│   ├── index.css           # Global styles
-│   ├── App.jsx             # Root component
-│   └── ai.js               # Groq API integration
+│   ├── index.jsx               # React mount point
+│   ├── index.css               # Global styles
+│   ├── App.jsx                 # Root component
+│   └── ai.js                   # API client (fetch to Worker)
 ├── components/
-│   ├── Header.jsx          # Logo and title
-│   ├── Main.jsx            # Ingredient form + state management
-│   ├── IngredientsList.jsx # Ingredient list + "Get recipe" trigger
-│   └── ClaudeRecipe.jsx    # Rendered recipe output
+│   ├── Header.jsx              # Logo and title
+│   ├── Main.jsx                # Ingredient form + state management
+│   ├── IngredientsList.jsx     # Ingredient list + "Get recipe" trigger
+│   └── ClaudeRecipe.jsx        # Rendered recipe output
+├── worker/                     # Cloudflare Worker (API proxy)
+│   ├── worker.js               # Worker logic: CORS, validation, Groq calls
+│   ├── wrangler.toml           # Wrangler configuration
+│   ├── .dev.vars               # Local secrets (gitignored)
+│   └── .dev.vars.example       # Template for local secrets
+├── .github/workflows/
+│   └── deploy.yml              # GitHub Actions CI/CD
 └── media/
-    └── chef-claude-icon.png
+    ├── chef-claude-icon.png
+    ├── demo.png
+    └── demo.mp4
 ```
 
 ## Security Note
 
-The API key is exposed client-side via `import.meta.env`. Do not deploy this app publicly without a backend proxy to protect your key.
+The Groq API key is stored server-side in the Cloudflare Worker (set via `wrangler secret put` or `.dev.vars`). The client only knows the Worker URL. CORS is configured to only allow requests from the dev server and the production GitHub Pages domain.
