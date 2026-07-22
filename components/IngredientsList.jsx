@@ -1,12 +1,15 @@
 
 
+import { useLanguage } from "../src/LanguageContext"
+
 export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef}) {
+  const { t } = useLanguage()
     const IngredientsListItems = ingredients.map((ingredientItem, index) => (
       <li key={`${ingredientItem}-${index}`}>
         {ingredientItem}
         <button 
           className="remove-ingredient-btn"
-          aria-label={`Remove ${ingredientItem}`}
+          aria-label={t("removeAriaLabel", { item: ingredientItem })}
           onClick={() => removeIngredient(index)}
         >
           ✕
@@ -16,21 +19,21 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
 
   return(
     <section>
-      <h2>Ingredients on hand:</h2>
+      <h2>{t("ingredientsOnHand")}</h2>
       <ul className="ingredients-list" aria-live="polite">
         {IngredientsListItems}
       </ul>
       {ingredients.length > 3 ? 
       <div className="get-recipe-container">
         <div ref={sectionRef}>
-          <h3>Ready for a recipe?</h3>
-          <p>Generate a recipe from your list of ingredients. </p>
+          <h3>{t("readyForRecipe")}</h3>
+          <p>{t("generateRecipe")}</p>
         </div>
         <button 
           disabled={loading}
           onClick={() => {getRecipe(ingredients)}}
         >
-          {loading ? "Loading..." : "Get a recipe"}
+          {loading ? t("loading") : t("getRecipe")}
         </button>
       </div>: null}
     </section>

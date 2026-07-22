@@ -2,8 +2,10 @@ import { useState, useRef, useEffect } from "react"
 import ClaudeRecipe from "./ClaudeRecipe"
 import IngredientsList from "./IngredientsList"
 import { getRecipeFromGroq } from "../src/ai"
+import { useLanguage } from "../src/LanguageContext"
 
 export default function Main() {
+  const { t, language } = useLanguage()
   const [recipe, setRecipe] = useState("") 
   const [ingredients, setIngredients] = useState([])
   const [loading, setLoading] = useState(false)
@@ -21,7 +23,7 @@ export default function Main() {
   function addIngredient(formData) {
     const newIngredient = formData.get("ingredient")
     if (!isValidIngredient(newIngredient)) {
-      setError("Please enter a valid food ingredient (e.g. oregano, chicken)")
+      setError(t("errorInvalidIngredient"))
       return
     }
     setIngredients(prevIngredients => [...prevIngredients, newIngredient.trim()])
@@ -40,26 +42,26 @@ export default function Main() {
     setLoading(true)
     setError("")
     try {
-      const recipeMarkdown = await getRecipeFromGroq(ingredients)
-      if (!recipeMarkdown) throw new Error("No recipe returned")
+      const recipeMarkdown = await getRecipeFromGroq(ingredients, language)
+      if (!recipeMarkdown) throw new Error(t("errorNoRecipe"))
       setRecipe(recipeMarkdown)
     } catch (err) {
-      setError(err.message || "Failed to generate recipe. Please try again.")
+      setError(err.message || t("errorNoRecipe"))
     } finally {
       setLoading(false)
     }
   }
-  
+
   return (
   <main>
     <form className="add-ingredient-form" action={addIngredient}>
       <input 
         type="text"
-        placeholder="e.g. oregano"
-        aria-label="Add ingredient"
+        placeholder={t("ingredientPlaceholder")}
+        aria-label={t("addIngredient")}
         name="ingredient"
       />
-      <button>Add ingredient</button>
+      <button>{t("addIngredient")}</button>
     </form>
     {ingredients.length ? 
     <IngredientsList 
@@ -71,13 +73,13 @@ export default function Main() {
     /> : null}
     {loading && (
       <section className="loading-container" aria-live="polite">
-        <p>Generating recipe...</p>
+        <p>{t("generatingRecipe")}</p>
       </section>
     )}
     {error && (
       <section className="error-container" aria-live="assertive">
         <p className="error-message">{error}</p>
-        <button onClick={() => setError("")}>Close</button>
+        <button onClick={() => setError("")}>{t("errorClose")}</button>
       </section>
     )}
     {recipe ? <ClaudeRecipe recipe={recipe} /> : null}
