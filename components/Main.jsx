@@ -309,7 +309,9 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
       if (!recipeMarkdown) throw new Error(t("errorNoRecipe"))
       if (existingRecipe) {
         let retries = 0
+        const retryDelays = [800, 1600]
         while (recipeMarkdown === existingRecipe && retries < 2) {
+          await new Promise(resolve => setTimeout(resolve, retryDelays[retries] ?? 1600))
           recipeMarkdown = await getRecipeFromGroq(ingredients, recipeLanguage, existingRecipe)
           retries++
         }
@@ -318,13 +320,15 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
       setRecipeMeta({ ingredients: [...ingredients], language: recipeLanguage })
       saveToHistory(recipeMarkdown, ingredients, recipeLanguage)
     } catch (err) {
-      setError(err.message || t("errorNoRecipe"))
+      const isRateLimited = Boolean(err?.cause?.isRateLimited)
+      setError(isRateLimited ? t("errorBusy") : (err.message || t("errorNoRecipe")))
     } finally {
       setLoading(false)
     }
   }
 
   const isDuplicateFromHistory = duplicatePrompt?.source === "history"
+  const viewingRecipeFromHistory = !viewingRecipe?.fromSaved
 
   const handleDeleteRecipe = useCallback((recipe) => {
     if (isHistory) {
@@ -341,7 +345,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     saveToSaved(viewingRecipe.recipe, viewingRecipe.ingredients, viewingRecipe.language)
   }, [viewingRecipe])
 
-  const viewerOnSave = viewingRecipe && !viewingRecipe.fromSaved ? handleSaveViewingRecipe : null
+  const viewerOnSave = viewingRecipe && viewingRecipeFromHistory ? handleSaveViewingRecipe : null
 
   return (
   <main>
@@ -447,7 +451,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
 
     <RecipeViewer
       recipe={viewingRecipe?.recipe}
-      isSaved={viewingRecipe ? !viewingRecipe.fromSaved && savedRecipes.some(r => r.recipe === viewingRecipe.recipe) : false}
+      isSaved={viewingRecipe ? viewingRecipeFromHistory && savedRecipes.some(r => r.recipe === viewingRecipe.recipe) : false}
       onSave={viewerOnSave}
       onClose={closeRecipeViewer}
       t={t}

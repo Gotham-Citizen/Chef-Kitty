@@ -14,6 +14,7 @@ export default {
       errorInvalidIngredient: "Introduce un ingrediente alimentario válido (p. ej. orégano, pollo)",
       errorClose: "Cerrar",
       errorNoRecipe: "No se pudo generar la receta. Inténtalo de nuevo.",
+      errorBusy: "El servicio de recetas está ocupado. Inténtalo de nuevo en un momento.",
       removeAriaLabel: "Quitar {{item}}",
       logoAlt: "Logotipo de Kitty Chef",
       minIngredients: "Añade al menos {{n}} ingredientes para generar una receta.",
