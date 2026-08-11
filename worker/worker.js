@@ -30,6 +30,40 @@ function getCorsHeaders(request) {
     }
 }
 
+const MAX_GROQ_RETRIES = 2
+const RETRYABLE_STATUSES = new Set([429, 502, 503])
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function retryDelayMs(groqResponse) {
+    const retryAfter = Number(groqResponse.headers.get('Retry-After'))
+    if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        return Math.min(retryAfter * 1000, 2000)
+    }
+    return 500
+}
+
+async function callGroq(env, payload) {
+    let lastResponse
+    for (let attempt = 0; attempt <= MAX_GROQ_RETRIES; attempt++) {
+        const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${env.GROQ_API_KEY}`,
+            },
+            body: JSON.stringify(payload),
+        })
+        if (groqResponse.ok) return groqResponse
+        lastResponse = groqResponse
+        if (!RETRYABLE_STATUSES.has(groqResponse.status)) return groqResponse
+        if (attempt < MAX_GROQ_RETRIES) await sleep(retryDelayMs(groqResponse))
+    }
+    return lastResponse
+}
+
 export default {
     async fetch(request, env) {
         const corsHeaders = getCorsHeaders(request)
@@ -58,42 +92,38 @@ export default {
                 })
             }
 
-            const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${env.GROQ_API_KEY}`,
-                },
-                body: JSON.stringify({
-                    model: 'openai/gpt-oss-20b',
-                    messages: [
-                        { role: 'system', content: buildSystemPrompt(language || 'en', existingRecipe) },
-                        { role: 'user', content: buildUserMessage(ingredients, language || 'en') },
-                    ],
-                    max_tokens: 4096,
-                    response_format: {
-                        type: "json_schema",
-                        json_schema: {
-                            name: "recipe_response",
-                            strict: true,
-                            schema: {
-                                type: "object",
-                                properties: {
-                                    recipe: { type: "string", description: "The complete recipe as a single markdown string" },
-                                },
-                                required: ["recipe"],
-                                additionalProperties: false,
+            const groqResponse = await callGroq(env, {
+                model: 'openai/gpt-oss-20b',
+                messages: [
+                    { role: 'system', content: buildSystemPrompt(language || 'en', existingRecipe) },
+                    { role: 'user', content: buildUserMessage(ingredients, language || 'en') },
+                ],
+                max_tokens: 4096,
+                response_format: {
+                    type: "json_schema",
+                    json_schema: {
+                        name: "recipe_response",
+                        strict: true,
+                        schema: {
+                            type: "object",
+                            properties: {
+                                recipe: { type: "string", description: "The complete recipe as a single markdown string" },
                             },
+                            required: ["recipe"],
+                            additionalProperties: false,
                         },
                     },
-                }),
+                },
             })
 
             if (!groqResponse.ok) {
                 const errorText = await groqResponse.text()
                 console.error('Groq API error:', groqResponse.status, errorText)
-                return new Response(JSON.stringify({ error: 'Groq API request failed' }), {
-                    status: 502,
+                const responseStatus = groqResponse.status >= 500 || groqResponse.status === 429
+                    ? groqResponse.status
+                    : 502
+                return new Response(JSON.stringify({ error: 'Groq API request failed', status: groqResponse.status }), {
+                    status: responseStatus,
                     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
                 })
             }

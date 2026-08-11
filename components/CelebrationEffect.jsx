@@ -43,7 +43,7 @@ function preloadAndShrink(src, timeoutMs = 30000) {
         thumbImg.onload = () => finish(true, thumbUrl)
         thumbImg.onerror = () => finish(true, src, "thumb-load-failed")
         thumbImg.src = thumbUrl
-      } catch (e) {
+      } catch {
         finish(true, src, "canvas-failed") // 跨域等原因画布被污染时兜底用原图
       }
     }

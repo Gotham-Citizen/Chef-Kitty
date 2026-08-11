@@ -14,6 +14,7 @@ export default {
       errorInvalidIngredient: "请输入有效的食材（例如 鸡肉、米饭）",
       errorClose: "关闭",
       errorNoRecipe: "生成食谱失败，请重试。",
+      errorBusy: "食谱服务繁忙，请稍后重试。",
       removeAriaLabel: "移除 {{item}}",
       logoAlt: "Kitty Chef标志",
       minIngredients: "请至少添加{{n}}种食材来生成食谱。",

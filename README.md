@@ -161,11 +161,13 @@ npm run preview
 
 The app detects your browser's language setting and automatically switches the UI between English, Chinese, and Spanish. The AI is instructed to respond in the language of your ingredients (detected via `detectInputLanguage()`); autocomplete suggestions always follow the browser/UI language.
 
-| Language | UI Detection                       | AI Response Detection            |
-| -------- | ---------------------------------- | -------------------------------- |
-| English  | `navigator.language` starts with `en` | ingredients contain no CJK chars |
-| Chinese  | `navigator.language` starts with `zh` | ingredients contain CJK chars    |
-| Spanish  | `navigator.language` starts with `es` | UI language is Spanish           |
+| Language | UI Detection                       | AI Response Detection                                                                     |
+| -------- | ---------------------------------- | ----------------------------------------------------------------------------------------- |
+| English  | `navigator.language` starts with `en` | ingredients match `INGREDIENTS.en`; otherwise fallback                                |
+| Chinese  | `navigator.language` starts with `zh` | ingredients contain CJK chars                                                          |
+| Spanish  | `navigator.language` starts with `es` | ingredients contain `ñáéíóúü` or match `INGREDIENTS.es`; otherwise fallback            |
+
+For AI response detection, the ingredient text is classified before any UI fallback: CJK characters win, then Spanish-specific characters, then a vocabulary vote between the Spanish and English ingredient lists. If the ingredients are unrecognized or the votes tie, the UI language is used as a final fallback.
 
 To add a new language, add a translation file under `src/utils/locales/`, register it in `src/utils/i18n.js`, add a matching entry in `src/ingredients.js`, and update the prompt templates in `worker/prompts.js`.
 

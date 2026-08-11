@@ -14,6 +14,7 @@ export default {
       errorInvalidIngredient: "Please enter a valid food ingredient (e.g. oregano, chicken)",
       errorClose: "Close",
       errorNoRecipe: "Failed to generate recipe. Please try again.",
+      errorBusy: "The recipe service is busy. Please try again in a moment.",
       removeAriaLabel: "Remove {{item}}",
       logoAlt: "Kitty Chef logo",
       minIngredients: "Add at least {{n}} ingredients to generate a recipe.",

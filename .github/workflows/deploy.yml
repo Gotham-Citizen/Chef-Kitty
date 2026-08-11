@@ -25,7 +25,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL }}
+          VITE_WORKER_URL: ${{ secrets.VITE_WORKER_URL || 'https://chef-kitty-proxy.myenglishnameisbennie.workers.dev' }}
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
