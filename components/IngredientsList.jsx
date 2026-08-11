@@ -1,9 +1,7 @@
-
-
-import { useLanguage } from "../src/LanguageContext"
+import { useTranslation } from 'react-i18next';
 
 export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef}) {
-  const { t } = useLanguage()
+  const { t } = useTranslation()
     const IngredientsListItems = ingredients.map((ingredientItem, index) => (
       <li key={`${ingredientItem}-${index}`}>
         {ingredientItem}
@@ -35,7 +33,7 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
         >
           {loading ? t("loading") : t("getRecipe")}
         </button>
-      </div>: null}
+      </div> : <p className="min-ingredients-hint">{t("minIngredients", { n: 4 })}</p>}
     </section>
   )
 }
