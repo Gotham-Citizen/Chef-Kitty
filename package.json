@@ -1,9 +1,9 @@
 {
-  "name": "chef-claude",
+  "name": "chef-kitty",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://Gotham-Citizen.github.io/Chef-Claude",
+  "homepage": "https://Gotham-Citizen.github.io/Chef-Kitty",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -13,8 +13,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "i18next": "^24.2.2",
+    "i18next-browser-languagedetector": "^8.0.4",
+    "pinyin-pro": "^3.28.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-i18next": "^15.4.1",
     "react-markdown": "^10.1.0"
   },
   "devDependencies": {
