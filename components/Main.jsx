@@ -1,4 +1,4 @@
-mport { useState, useRef, useEffect, useCallback } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 import KittyRecipe from "./KittyRecipe"
 import IngredientsList from "./IngredientsList"
 import RecipesModal from "./RecipesModal"
