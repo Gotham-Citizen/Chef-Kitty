@@ -42,6 +42,18 @@ export default {
       editTags: "编辑标签",
       removeTag: "移除标签",
       noMatchingRecipes: "没有符合所选标签的食谱",
+      duplicateTagTitle: "标签已存在",
+      duplicateTagMessage: "标签“{{typed}}”已作为“{{existing}}”存在。是否保存到该标签下？",
+      duplicateTagSaveUnder: "保存到“{{existing}}”下",
+      duplicateTagCancel: "取消",
+      saveLimitTitle: "已达到食谱上限",
+      saveLimitMessage: "您最多可以保存{{n}}个食谱。请删除一个已保存的食谱，为新食谱腾出空间。",
+      saveLimitDeleteAction: "删除一个食谱以保存此食谱",
+      saveLimitGiveUp: "放弃保存",
+      saveLimitPickTitle: "选择要删除的食谱",
+      saveLimitPickHint: "您删除的食谱将被移除，为新食谱腾出空间。",
+      saveLimitCancel: "取消",
+      saveLimitSubtitle: "最多保存{{n}}个食谱",
     }
   }
 }

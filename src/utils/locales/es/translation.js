@@ -42,6 +42,18 @@ export default {
       editTags: "Editar etiquetas",
       removeTag: "Quitar etiqueta",
       noMatchingRecipes: "Ninguna receta coincide con las etiquetas seleccionadas",
+      duplicateTagTitle: "Etiqueta duplicada",
+      duplicateTagMessage: "La etiqueta '{{typed}}' ya existe como '{{existing}}'. ¿Guardar bajo esa etiqueta o cancelar?",
+      duplicateTagSaveUnder: "Guardar como '{{existing}}'",
+      duplicateTagCancel: "Cancelar",
+      saveLimitTitle: "Límite de recetas alcanzado",
+      saveLimitMessage: "Puedes guardar hasta {{n}} recetas. Elimina una receta guardada para hacer espacio para esta.",
+      saveLimitDeleteAction: "Eliminar una receta para guardar esta",
+      saveLimitGiveUp: "Rendirse",
+      saveLimitPickTitle: "Elige una receta para eliminar",
+      saveLimitPickHint: "La receta que elimines se quitará para hacer espacio para la nueva.",
+      saveLimitCancel: "Cancelar",
+      saveLimitSubtitle: "Guarda hasta {{n}} recetas",
     }
   }
 }

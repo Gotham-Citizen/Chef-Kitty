@@ -2,14 +2,18 @@ import { useState, useRef, useEffect, useCallback } from "react"
 import KittyRecipe from "./KittyRecipe"
 import IngredientsList from "./IngredientsList"
 import RecipesModal from "./RecipesModal"
+import SavedLimitModal from "./SavedLimitModal"
 import RecipeViewer from "./RecipeViewer"
 import CelebrationEffect from "./CelebrationEffect"
 import { getRecipeFromGroq } from "../src/ai"
 import { useTranslation } from 'react-i18next';
 import INGREDIENTS from "../src/ingredients"
+import useLocalStorage from "../src/utils/useLocalStorage"
 import { detectInputLanguage } from "../src/utils/i18n"
 import { similarity, isSimilarEnough } from "../src/utils/levenshtein"
 import { getPinyin, getPinyinInitials } from "../src/utils/pinyin"
+
+const SAVED_LIMIT = 50
 
 export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistory }) {
   const { t, i18n } = useTranslation();
@@ -24,36 +28,12 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   const ingredientsSection = useRef(null)
   const blurTimeout = useRef(null)
 
-  const [history, setHistory] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("chef-kitty-history") || "[]")
-    } catch {
-      return []
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("chef-kitty-history", JSON.stringify(history))
-    } catch { /* localStorage full or unavailable */ }
-  }, [history])
-
-  const [savedRecipes, setSavedRecipes] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("chef-kitty-saved") || "[]")
-    } catch {
-      return []
-    }
-  })
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("chef-kitty-saved", JSON.stringify(savedRecipes))
-    } catch { /* localStorage full or unavailable */ }
-  }, [savedRecipes])
+  const [history, setHistory] = useLocalStorage("chef-kitty-history", [])
+  const [savedRecipes, setSavedRecipes] = useLocalStorage("chef-kitty-saved", [])
 
   const [recipeMeta, setRecipeMeta] = useState(null)
   const [viewingRecipe, setViewingRecipe] = useState(null)
+  const [pendingSave, setPendingSave] = useState(null)
   const [duplicatePrompt, setDuplicatePrompt] = useState(null)
   const [pendingIngredients, setPendingIngredients] = useState(null)
   const [celebrationKey, setCelebrationKey] = useState(0)
@@ -67,30 +47,54 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     })
   }
 
-  function saveToSaved(recipe, ingredients, language) {
+  const storeSavedRecipe = useCallback((recipe, ingredients, language) => {
     setSavedRecipes(prev => {
       if (prev.some(r => r.recipe === recipe)) return prev
       const entry = { id: Date.now(), recipe, ingredients, language, tags: [], savedAt: new Date().toISOString() }
-      return [entry, ...prev].slice(0, 50)
+      return [entry, ...prev].slice(0, SAVED_LIMIT)
     })
     setCelebrationKey(k => k + 1)
     setShowCelebration(true)
     if (celebrationTimer.current) clearTimeout(celebrationTimer.current)
     celebrationTimer.current = setTimeout(() => setShowCelebration(false), 4500)
-  }
+  }, [setSavedRecipes])
+
+  const saveToSaved = useCallback((recipe, ingredients, language) => {
+    if (savedRecipes.length >= SAVED_LIMIT) {
+      setPendingSave({ recipe, ingredients, language })
+      return
+    }
+    storeSavedRecipe(recipe, ingredients, language)
+  }, [savedRecipes, storeSavedRecipe])
+
+  const handleReplaceForPendingSave = useCallback((id) => {
+    setSavedRecipes(prev => prev.filter(r => r.id !== id))
+    if (pendingSave) {
+      storeSavedRecipe(pendingSave.recipe, pendingSave.ingredients, pendingSave.language)
+    }
+    setPendingSave(null)
+  }, [pendingSave, storeSavedRecipe, setSavedRecipes])
 
   const deleteSavedRecipe = useCallback((id) => {
     setSavedRecipes(prev => prev.filter(r => r.id !== id))
-  }, [])
+  }, [setSavedRecipes])
 
   const deleteHistoryItem = useCallback((id) => {
     setHistory(prev => prev.filter(r => r.id !== id))
-  }, [])
+  }, [setHistory])
 
   const updateSavedTags = useCallback((id, tags) => {
     setSavedRecipes(prev => prev.map(r => (r.id === id ? { ...r, tags } : r)))
-  }, [])
+  }, [setSavedRecipes])
 
+  const renameSavedTag = useCallback((oldTag, newTag) => {
+    const oldKey = oldTag.trim().toLowerCase()
+    setSavedRecipes(prev => prev.map(r => ({
+      ...r,
+      tags: (r.tags || []).map(x => x.trim().toLowerCase() === oldKey ? newTag : x),
+    })))
+  }, [setSavedRecipes])
+  
   const viewRecipeFromList = useCallback((entry) => {
     setViewingRecipe({ recipe: entry.recipe, ingredients: entry.ingredients, language: entry.language, fromSaved: !isHistory })
   }, [isHistory])
@@ -290,17 +294,19 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   }
 
   function handleDuplicateChoice(viewSaved) {
-    const existing = duplicatePrompt?.recipe
+    const { recipe, language, ingredients } = duplicatePrompt || {}
     if (viewSaved && duplicatePrompt) {
-      setViewingRecipe({ recipe: existing, ingredients: duplicatePrompt.ingredients, language: duplicatePrompt.language })
+      setViewingRecipe({ recipe, ingredients, language })
     } else if (pendingIngredients) {
-      getRecipe(pendingIngredients, existing)
+      getRecipe(pendingIngredients, recipe)
     }
     setDuplicatePrompt(null)
     setPendingIngredients(null)
   }
 
   async function getRecipe(ingredients, existingRecipe) {
+    setRecipe("")
+    setRecipeMeta(null)
     setLoading(true)
     setError("")
     try {
@@ -343,7 +349,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   const handleSaveViewingRecipe = useCallback(() => {
     if (!viewingRecipe) return
     saveToSaved(viewingRecipe.recipe, viewingRecipe.ingredients, viewingRecipe.language)
-  }, [viewingRecipe])
+  }, [viewingRecipe, saveToSaved])
 
   const viewerOnSave = viewingRecipe && viewingRecipeFromHistory ? handleSaveViewingRecipe : null
 
@@ -435,16 +441,24 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
 
     {isRecipesModalOpen && (
       <RecipesModal
+        isHistory={isHistory}
         recipes={isHistory ? history : savedRecipes}
-        title={isHistory ? t("history") : t("savedRecipes")}
-        emptyMessage={isHistory ? t("noHistory") : t("noSavedRecipes")}
-        dateKey={isHistory ? "searchedOn" : "savedOn"}
-        showHistorySubtitle={isHistory}
-        showTags={!isHistory}
+        savedLimit={SAVED_LIMIT}
         onDelete={handleDeleteRecipe}
         onViewRecipe={viewRecipeFromList}
         onUpdateTags={updateSavedTags}
+        onRenameTag={renameSavedTag}
         onClose={onCloseRecipesModal}
+        t={t}
+      />
+    )}
+
+    {pendingSave && (
+      <SavedLimitModal
+        recipes={savedRecipes}
+        limit={SAVED_LIMIT}
+        onDelete={handleReplaceForPendingSave}
+        onCancel={() => setPendingSave(null)}
         t={t}
       />
     )}

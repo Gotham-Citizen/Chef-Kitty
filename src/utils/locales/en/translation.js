@@ -42,6 +42,18 @@ export default {
       editTags: "Edit tags",
       removeTag: "Remove tag",
       noMatchingRecipes: "No recipes match the selected tags",
+      duplicateTagTitle: "Duplicate tag",
+      duplicateTagMessage: "Tag '{{typed}}' already exists as '{{existing}}'. Save under that tag or cancel?",
+      duplicateTagSaveUnder: "Save under '{{existing}}'",
+      duplicateTagCancel: "Cancel",
+      saveLimitTitle: "Recipe limit reached",
+      saveLimitMessage: "You can save up to {{n}} recipes. Delete one saved recipe to make room for this one.",
+      saveLimitDeleteAction: "Delete a recipe to save this one",
+      saveLimitGiveUp: "Give up",
+      saveLimitPickTitle: "Choose a recipe to delete",
+      saveLimitPickHint: "The recipe you delete will be removed to make room for the new one.",
+      saveLimitCancel: "Cancel",
+      saveLimitSubtitle: "Save up to {{n}} recipes",
     }
   }
 }

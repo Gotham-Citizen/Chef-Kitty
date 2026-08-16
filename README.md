@@ -83,7 +83,7 @@ npm run preview
 - **AI recipe generation** — at least 4 ingredients, then click **Get a recipe**
 - **Recipe history** — your last 5 generated recipes are saved to `localStorage`
 - **Saved recipes** — bookmark up to 50 recipes; saving triggers a confetti + cat meme celebration 🎉
-- **Recipe tags & filtering** — assign custom tags to saved recipes (e.g. `quick`, `spicy`) and filter the saved list by tag chips
+- **Recipe tags & filtering** — assign, edit, rename, and remove custom tags on saved recipes (e.g. `quick`, `spicy`) and filter the saved list by tag chips
 - **Duplicate detection** — if the same ingredient set was already used, you can view the existing recipe or generate a different one
 - **Trilingual UI & AI responses** — UI follows your browser language; the AI answers in the language of your ingredients
 
@@ -129,6 +129,7 @@ npm run preview
 │       ├── i18n.js             # i18next setup + detectInputLanguage()
 │       ├── levenshtein.js      # Levenshtein distance/similarity helpers
 │       ├── pinyin.js           # Pinyin/initial conversion for zh autocomplete
+│       ├── useLocalStorage.js  # localStorage-backed state hook
 │       └── locales/
 │           ├── en/translation.js   # English translations
 │           ├── zh/translation.js   # Chinese translations
@@ -138,12 +139,14 @@ npm run preview
 │   ├── Main.jsx                # Ingredient form, state & recipe logic
 │   ├── IngredientsList.jsx     # Ingredient list + "Get recipe" trigger
 │   ├── KittyRecipe.jsx         # Rendered recipe output
-│   ├── RecipesModal.jsx         # History/saved recipes modal
+│   ├── RecipesModal.jsx        # History/saved recipes modal
+│   ├── SavedLimitModal.jsx     # Save-limit overflow modal
 │   ├── RecipeViewer.jsx        # Fullscreen recipe modal
-│   └── CelebrationEffect.jsx   # Confetti + cat meme animation
+│   ├── CelebrationEffect.jsx   # Confetti + cat meme animation
+│   └── Icons.jsx               # Shared SVG icons
 ├── worker/                     # Cloudflare Worker (API proxy)
 │   ├── worker.js               # Worker logic: CORS, validation, Groq calls
-│   ├── prompts.js              # System/user prompt templates (en & zh)
+│   ├── prompts.js              # System/user prompt templates (en, zh & es)
 │   ├── wrangler.toml           # Wrangler configuration
 │   ├── .dev.vars               # Local secrets (gitignored)
 │   └── .dev.vars.example       # Template for local secrets

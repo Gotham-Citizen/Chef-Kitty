@@ -85,7 +85,7 @@ npm run preview
 - **AI 生成食谱** — 至少添加 4 种食材后，点击 **生成食谱**
 - **食谱历史** — 最近生成的 5 条食谱自动保存到 `localStorage`
 - **收藏食谱** — 最多收藏 50 条食谱；收藏时会触发彩带与猫咪表情包庆祝动画 🎉
-- **食谱标签与筛选** — 可为收藏的食谱添加自定义标签（如 `快速`、`辣`），并通过标签进行筛选
+- **食谱标签与筛选** — 可为收藏的食谱添加、编辑、重命名和删除自定义标签（如 `快速`、`辣`），并通过标签进行筛选
 - **重复检测** — 如果同一组食材已生成过食谱，可查看已有食谱或生成一份不同的
 - **三语界面与 AI 回复** — 界面跟随浏览器语言，AI 会使用你输入食材的语言回复
 
@@ -104,7 +104,7 @@ npm run preview
 - **React 19** — UI 组件与 Hooks
 - **Vite** — 开发服务器与构建工具
 - **react-markdown** — 将 AI 返回的 Markdown 渲染为 HTML
-- **i18next + react-i18next** — 完整的国际化框架，支持浏览器语言检测；翻译文件位于 `src/utils/locales/{en,zh}/translation.js`
+- **i18next + react-i18next** — 完整的国际化框架，支持浏览器语言检测；翻译文件位于 `src/utils/locales/{en,zh,es}/translation.js`
 
 ### 后端 / 基础设施
 
@@ -129,6 +129,8 @@ npm run preview
 │   └── utils/
 │       ├── i18n.js             # i18next 初始化 + detectInputLanguage()
 │       ├── levenshtein.js      # Levenshtein 距离、相似度计算
+│       ├── pinyin.js           # 中文自动补全的拼音/首字母转换
+│       ├── useLocalStorage.js  # 基于 localStorage 的状态 Hook
 │       └── locales/
 │           ├── en/translation.js   # 英文翻译
 │           ├── zh/translation.js   # 中文翻译
@@ -139,11 +141,13 @@ npm run preview
 │   ├── IngredientsList.jsx     # 食材列表与"生成食谱"按钮
 │   ├── KittyRecipe.jsx         # 食谱渲染组件
 │   ├── RecipesModal.jsx         # 历史/收藏食谱弹窗
+│   ├── SavedLimitModal.jsx     # 收藏数量已满时的替换弹窗
 │   ├── RecipeViewer.jsx        # 全屏食谱查看弹窗
-│   └── CelebrationEffect.jsx   # 彩带 + 猫咪表情包动画
+│   ├── CelebrationEffect.jsx   # 彩带 + 猫咪表情包动画
+│   └── Icons.jsx               # 共享 SVG 图标
 ├── worker/                     # Cloudflare Worker（API 代理）
 │   ├── worker.js               # Worker 逻辑：CORS、验证、Groq 调用
-│   ├── prompts.js              # 系统/用户提示词模板（中英文）
+│   ├── prompts.js              # 系统/用户提示词模板（英中西文）
 │   ├── wrangler.toml           # Wrangler 配置
 │   ├── .dev.vars               # 本地密钥（已 gitignore）
 │   └── .dev.vars.example       # 本地密钥模板

@@ -1,5 +1,6 @@
 import chefKittyLogo from "../media/chef_kitten.png"
 import { useTranslation } from 'react-i18next';
+import { BookmarkIcon } from "./Icons"
 
 export default function Header ({ onHistoryClick, onSavedClick }) {
   const { t } = useTranslation();
@@ -19,9 +20,7 @@ export default function Header ({ onHistoryClick, onSavedClick }) {
           <span className="action-label">{t("history")}</span>
         </button>
         <button className="header-action-btn" onClick={onSavedClick} aria-label={t("saved")}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-          </svg>
+          <BookmarkIcon />
           <span className="action-label">{t("saved")}</span>
         </button>
       </div>
