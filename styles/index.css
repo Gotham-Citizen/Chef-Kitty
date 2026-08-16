@@ -312,6 +312,7 @@ ul.ingredients-list > li::before {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    min-height: 0;
     box-shadow: 0px 20px 60px rgba(0, 0, 0, 0.2);
 }
 
@@ -608,6 +609,93 @@ ul.ingredients-list > li::before {
     border-color: #D17557;
 }
 
+.saved-limit-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 400;
+    padding: 20px;
+}
+
+.saved-limit-modal {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 28px 32px;
+    box-shadow: 0px 20px 60px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+.saved-limit-modal h3 {
+    margin: 0 0 8px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #141413;
+}
+
+.saved-limit-modal p {
+    margin: 0 0 24px;
+    color: #6B7280;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+.saved-limit-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+}
+
+.saved-limit-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    text-align: left;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.saved-limit-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 8px;
+    border-bottom: 1px solid #F0EFEB;
+}
+
+.saved-limit-item:hover {
+    background: #FAFAF8;
+}
+
+.saved-limit-item-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.saved-limit-item-ingredients {
+    font-size: 0.95rem;
+    color: #141413;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.saved-limit-item-date {
+    font-size: 0.8rem;
+    color: #9CA3AF;
+    margin-top: 2px;
+}
+
 .recipe-viewer-overlay {
     position: fixed;
     inset: 0;
@@ -777,10 +865,21 @@ ul.ingredients-list > li::before {
 }
 
 @media (max-width: 640px) {
+    html, body {
+        overflow-x: clip;
+    }
+
     header {
         gap: 4px;
         height: 60px;
-        padding: 0 140px;
+        padding: 0 12px;
+    }
+
+    .header-center {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        margin-left: 0;
     }
 
     .header-center > img {
@@ -791,11 +890,94 @@ ul.ingredients-list > li::before {
         font-size: 1.1rem;
     }
 
+    .header-actions {
+        right: 12px;
+    }
+
     .action-label {
         display: none;
     }
 
     .header-action-btn {
         padding: 8px 10px;
+    }
+
+    main {
+        padding: 16px 16px 10px;
+    }
+
+    .add-ingredient-form {
+        gap: 8px;
+    }
+
+    .input-wrapper {
+        min-width: 0;
+    }
+
+    .add-ingredient-form > button {
+        width: auto;
+        padding: 0 16px;
+        white-space: nowrap;
+    }
+
+    .get-recipe-container {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .error-container {
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 8px;
+    }
+
+    .recipes-modal-overlay,
+    .duplicate-prompt-overlay,
+    .saved-limit-overlay,
+    .recipe-viewer-overlay {
+        padding: 12px;
+    }
+
+    .recipes-modal-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .recipes-modal-subtitle {
+        white-space: normal;
+    }
+
+    .recipes-modal-item {
+        padding: 12px 16px;
+    }
+
+    .duplicate-prompt-modal,
+    .saved-limit-modal {
+        padding: 20px;
+    }
+
+    .saved-limit-modal p {
+        white-space: normal;
+    }
+
+    .duplicate-prompt-actions,
+    .saved-limit-actions {
+        flex-wrap: wrap;
+    }
+
+    .recipe-viewer-content {
+        padding: 20px;
+    }
+
+    .ingredients-list > li {
+        flex-wrap: wrap;
+    }
+
+    .suggested-recipe-container,
+    .recipe-viewer-content {
+        overflow-wrap: break-word;
     }
 }
