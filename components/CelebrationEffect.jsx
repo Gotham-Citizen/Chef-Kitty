@@ -11,22 +11,20 @@ const catMemeModules = import.meta.glob('../media/cat-meme/*.{png,jpg,jpeg,webp,
 const CAT_IMAGES = Object.values(catMemeModules)
 
 const CAT_BLOB_URLS = new Map()
-window.__catblobLog = window.__catblobLog || []
 const THUMB_SIZE = 160
 
 function preloadAndShrink(src, timeoutMs = 30000) {
   return new Promise((resolve) => {
     const img = new Image()
     let settled = false
-    const finish = (ok, url, reason) => {
+    const finish = (url) => {
       if (settled) return
       settled = true
       clearTimeout(timer)
       CAT_BLOB_URLS.set(src, url || src)
-      window.__catblobLog.push(`${ok ? "OK" : "FAIL"} ${src} ${reason || ""}`)
       resolve()
     }
-    const timer = setTimeout(() => finish(false, null, "timeout"), timeoutMs)
+    const timer = setTimeout(() => finish(null), timeoutMs)
 
     img.onload = () => {
       try {
@@ -40,14 +38,14 @@ function preloadAndShrink(src, timeoutMs = 30000) {
         ctx.drawImage(img, (THUMB_SIZE - w) / 2, (THUMB_SIZE - h) / 2, w, h)
         const thumbUrl = canvas.toDataURL("image/png")
         const thumbImg = new Image()
-        thumbImg.onload = () => finish(true, thumbUrl)
-        thumbImg.onerror = () => finish(true, src, "thumb-load-failed")
+        thumbImg.onload = () => finish(thumbUrl)
+        thumbImg.onerror = () => finish(src)
         thumbImg.src = thumbUrl
       } catch {
-        finish(true, src, "canvas-failed") // 跨域等原因画布被污染时兜底用原图
+        finish(src) // 跨域等原因画布被污染时兜底用原图
       }
     }
-    img.onerror = () => finish(false, null, "img-error")
+    img.onerror = () => finish(null)
     img.src = src
   })
 }
@@ -172,8 +170,6 @@ export default function CelebrationEffect({ minConfettiCount = 40 }) {
   useEffect(() => {
     let active = true
     catImagesReady.then(() => {
-      window.__catblobLog.push(`GATE resolved, mapSize=${CAT_BLOB_URLS.size}`)
-      window.__catchImg = [...CAT_BLOB_URLS.entries()].slice(0, 3)
       if (active) setCatReady(true)
     })
     return () => { active = false }

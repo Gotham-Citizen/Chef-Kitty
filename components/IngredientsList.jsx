@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef}) {
   const { t } = useTranslation()
-    const IngredientsListItems = ingredients.map((ingredientItem, index) => (
+    const ingredientsListItems = ingredients.map((ingredientItem, index) => (
       <li key={`${ingredientItem}-${index}`}>
         {ingredientItem}
         <button 
@@ -19,7 +19,7 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
     <section>
       <h2>{t("ingredientsOnHand")}</h2>
       <ul className="ingredients-list" aria-live="polite">
-        {IngredientsListItems}
+        {ingredientsListItems}
       </ul>
       {ingredients.length > 3 ? 
       <div className="get-recipe-container">
