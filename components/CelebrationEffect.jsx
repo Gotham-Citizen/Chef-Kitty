@@ -2,8 +2,6 @@ import { useEffect, useRef, useMemo, useState } from "react"
 
 const COLORS = ["#D17557", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EC4899", "#EF4444"]
 
-// 加载 media/cat-meme 文件夹下所有图片
-// 路径是相对于本文件的位置，如果本文件不在与 media 同级目录，请调整相对路径
 const catMemeModules = import.meta.glob('../media/cat-meme/*.{png,jpg,jpeg,webp,gif}', {
   eager: true,
   import: 'default',

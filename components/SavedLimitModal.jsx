@@ -1,12 +1,18 @@
 import { useState } from "react"
 import { TrashIcon } from "./Icons"
+import Modal from "./Modal"
 
 function SavedLimitModal({ recipes, limit, onDelete, onCancel, t }) {
   const [step, setStep] = useState("warning")
+  const ariaLabel = step === "warning" ? t("saveLimitTitle") : t("saveLimitPickTitle")
 
   return (
-    <div className="saved-limit-overlay" onClick={onCancel}>
-      <div className="saved-limit-modal" onClick={e => e.stopPropagation()}>
+    <Modal
+      overlayClassName="saved-limit-overlay"
+      modalClassName="saved-limit-modal"
+      ariaLabel={ariaLabel}
+      onClose={onCancel}
+    >
         {step === "warning" ? (
           <>
             <h3>{t("saveLimitTitle")}</h3>
@@ -53,8 +59,7 @@ function SavedLimitModal({ recipes, limit, onDelete, onCancel, t }) {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }
 

@@ -8,9 +8,9 @@ function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-export async function getRecipeFromGroq(ingredientsArr, language = "en", existingRecipe) {
+export async function getRecipeFromGroq(ingredientsArr, language = "en", existingDishes) {
     const body = { ingredients: ingredientsArr, language }
-    if (existingRecipe) body.existingRecipe = existingRecipe
+    if (existingDishes && existingDishes.length > 0) body.existingDishes = existingDishes
 
     let lastStatus = null
     for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
@@ -22,7 +22,7 @@ export async function getRecipeFromGroq(ingredientsArr, language = "en", existin
 
         if (response.ok) {
             const data = await response.json()
-            return data.recipe
+            return data
         }
 
         lastStatus = response.status

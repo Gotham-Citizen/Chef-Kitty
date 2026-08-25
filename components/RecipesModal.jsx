@@ -1,5 +1,6 @@
 import { useState, useMemo, memo } from "react"
 import { CloseIcon, TrashIcon, EditIcon } from "./Icons"
+import Modal from "./Modal"
 
 function RecipesModal({ recipes, isHistory, savedLimit, onDelete, onViewRecipe, onUpdateTags, onRenameTag, onClose, t }) {
   const title = isHistory ? t("history") : t("savedRecipes")
@@ -96,6 +97,7 @@ function RecipesModal({ recipes, isHistory, savedLimit, onDelete, onViewRecipe, 
       onCommit()
       setEditingRecipeId(null)
     } else if (e.key === "Escape") {
+      e.preventDefault()
       setEditingRecipeId(null)
       setEditingTag(null)
       setDraftTag("")
@@ -119,8 +121,12 @@ function RecipesModal({ recipes, isHistory, savedLimit, onDelete, onViewRecipe, 
 
   return (
     <>
-      <div className="recipes-modal-overlay" onClick={onClose}>
-      <div className="recipes-modal" onClick={e => e.stopPropagation()}>
+      <Modal
+        overlayClassName="recipes-modal-overlay"
+        modalClassName="recipes-modal"
+        ariaLabel={title}
+        onClose={onClose}
+      >
         <div className="recipes-modal-header">
           <div className="recipes-modal-title">
             <h2>{title}</h2>
@@ -264,13 +270,16 @@ function RecipesModal({ recipes, isHistory, savedLimit, onDelete, onViewRecipe, 
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </Modal>
 
     {duplicateTagPrompt && (
-      <div className="duplicate-prompt-overlay" onClick={() => setDuplicateTagPrompt(null)}>
-        <div className="duplicate-prompt-modal" onClick={e => e.stopPropagation()}>
-          <h3>{t("duplicateTagTitle")}</h3>
+      <Modal
+        overlayClassName="duplicate-prompt-overlay"
+        modalClassName="duplicate-prompt-modal"
+        ariaLabel={t("duplicateTagTitle")}
+        onClose={() => setDuplicateTagPrompt(null)}
+      >
+        <h3>{t("duplicateTagTitle")}</h3>
           <p>{t("duplicateTagMessage", { typed: duplicateTagPrompt.typedTag, existing: duplicateTagPrompt.existingTag })}</p>
           <div className="duplicate-prompt-actions">
             <button
@@ -293,8 +302,7 @@ function RecipesModal({ recipes, isHistory, savedLimit, onDelete, onViewRecipe, 
               {t("duplicateTagCancel")}
             </button>
           </div>
-        </div>
-      </div>
+      </Modal>
     )}
     </>
   )

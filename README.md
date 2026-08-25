@@ -81,10 +81,14 @@ npm run preview
 
 - **Ingredient autocomplete** — type to see suggestions from a curated trilingual ingredient list (`src/ingredients.js`) with keyboard navigation; when the UI is Chinese, suggestions also match by pinyin romanization and initials
 - **AI recipe generation** — at least 4 ingredients, then click **Get a recipe**
+- **Instant recipes with background photos** — the recipe renders the moment it's generated, while a matching dish photo is fetched in the background from TheMealDB / Wikimedia Commons and pops in when ready
+- **Similar ingredient detection** — uses Levenshtein distance to flag duplicates when adding a new ingredient that is ≥ 0.8 similar to an existing one (e.g. `tomatos` is detected as a duplicate of `tomatoes`)
+- **Download & share recipes as Markdown** — export any recipe as a `.md` file, or share it via the native share sheet: the file is attached where the platform supports it, and on Windows it gracefully falls back to sharing the recipe as text + link, or copying the markdown to your clipboard
 - **Recipe history** — your last 5 generated recipes are saved to `localStorage`
 - **Saved recipes** — bookmark up to 50 recipes; saving triggers a confetti + cat meme celebration 🎉
 - **Recipe tags & filtering** — assign, edit, rename, and remove custom tags on saved recipes (e.g. `quick`, `spicy`) and filter the saved list by tag chips
 - **Duplicate detection** — if the same ingredient set was already used, you can view the existing recipe or generate a different one
+- **Accessible modals** — all dialogs share a `<Modal>` component with `role="dialog"`, Escape to close, focus trapping, and focus restoration; nested dialogs only respond to the topmost layer
 - **Trilingual UI & AI responses** — UI follows your browser language; the AI answers in the language of your ingredients
 
 ## How It Works
@@ -92,8 +96,8 @@ npm run preview
 1. Type ingredients into the form and add them to your list (with autocomplete suggestions).
 2. Once you have at least 4 ingredients, click **Get a recipe**.
 3. The app sends your ingredients to a Cloudflare Worker, which proxies the request to the Groq API (`openai/gpt-oss-20b`) using Structured Outputs with Strict Mode to guarantee a schema-compliant response.
-4. A markdown-formatted recipe is returned and rendered on the page.
-5. Recipes are saved to history automatically; you can save favorites and view them anytime.
+4. A markdown-formatted recipe is returned and rendered on the page immediately; a matching dish photo is looked up asynchronously (`src/utils/dishImage.js`) and displayed when it resolves.
+5. Recipes are saved to history right away — the photo is patched into the saved entry once the lookup completes; you can save favorites and view them anytime.
 
 ## Tech Stack
 
@@ -102,7 +106,7 @@ npm run preview
 - **React 19** — UI components and hooks
 - **Vite** — dev server and build tooling
 - **react-markdown** — renders the AI's markdown response as styled HTML
-- **pinyin-pro** — pinyin romanization and initials for Chinese ingredient autocomplete (e.g. typing `qie` or `qr` matches `茄子`/`茄` entries)
+- **pinyin-pro** — pinyin romanization and initials for Chinese ingredient autocomplete (e.g. typing `qie` or `qr` matches `茄子`/`茄` entries); the dictionary chunk is lazy-loaded only when the UI language is Chinese
 - **i18next + react-i18next** — full i18n framework with browser language detection; translations live in `src/utils/locales/{en,zh,es}/translation.js`
 
 ### Backend / Infrastructure
@@ -126,6 +130,7 @@ npm run preview
 │   ├── ai.js                   # API client (fetch to Worker)
 │   ├── ingredients.js          # Trilingual autocomplete ingredient list
 │   └── utils/
+│       ├── dishImage.js         # Dish photo lookup (TheMealDB → Wikimedia Commons)
 │       ├── i18n.js             # i18next setup + detectInputLanguage()
 │       ├── levenshtein.js      # Levenshtein distance/similarity helpers
 │       ├── pinyin.js           # Pinyin/initial conversion for zh autocomplete
@@ -139,6 +144,7 @@ npm run preview
 │   ├── Main.jsx                # Ingredient form, state & recipe logic
 │   ├── IngredientsList.jsx     # Ingredient list + "Get recipe" trigger
 │   ├── KittyRecipe.jsx         # Rendered recipe output
+│   ├── Modal.jsx               # Shared accessible dialog (Escape, focus trap, focus restore)
 │   ├── RecipesModal.jsx        # History/saved recipes modal
 │   ├── SavedLimitModal.jsx     # Save-limit overflow modal
 │   ├── RecipeViewer.jsx        # Fullscreen recipe modal
@@ -157,7 +163,7 @@ npm run preview
     ├── demo.png
     ├── demo.mp4
     ├── demo-video.gif
-    └── cat-meme/               # Cat meme images used in celebrations
+    └── cat-meme/               # Cat meme animations (animated WebP) used in celebrations
 ```
 
 ## Language Support

@@ -5,15 +5,23 @@ import RecipesModal from "./RecipesModal"
 import SavedLimitModal from "./SavedLimitModal"
 import RecipeViewer from "./RecipeViewer"
 import CelebrationEffect from "./CelebrationEffect"
+import Modal from "./Modal"
+import { RefreshIcon, DownloadIcon, ShareIcon } from "./Icons"
 import { getRecipeFromGroq } from "../src/ai"
+import { getDishImage } from "../src/utils/dishImage"
+import { downloadRecipe, shareRecipe, extractTitle } from "../src/utils/recipeShare"
 import { useTranslation } from 'react-i18next';
 import INGREDIENTS from "../src/ingredients"
 import useLocalStorage from "../src/utils/useLocalStorage"
 import { detectInputLanguage } from "../src/utils/i18n"
 import { similarity, isSimilarEnough } from "../src/utils/levenshtein"
-import { getPinyin, getPinyinInitials } from "../src/utils/pinyin"
+import { getPinyin, getPinyinInitials, loadPinyin } from "../src/utils/pinyin"
 
 const SAVED_LIMIT = 50
+
+function normalizeIngredients(ingredients) {
+  return (ingredients || []).map(i => i.trim().toLowerCase()).sort()
+}
 
 export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistory }) {
   const { t, i18n } = useTranslation();
@@ -26,6 +34,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [highlightIndex, setHighlightIndex] = useState(-1)
   const ingredientsSection = useRef(null)
+  const recipeSection = useRef(null)
   const blurTimeout = useRef(null)
 
   const [history, setHistory] = useLocalStorage("chef-kitty-history", [])
@@ -34,23 +43,36 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   const [recipeMeta, setRecipeMeta] = useState(null)
   const [viewingRecipe, setViewingRecipe] = useState(null)
   const [pendingSave, setPendingSave] = useState(null)
-  const [duplicatePrompt, setDuplicatePrompt] = useState(null)
+  const [duplicateIngredientPrompt, setDuplicateIngredientPrompt] = useState(null)
   const [pendingIngredients, setPendingIngredients] = useState(null)
+  const [duplicateRecipePrompt, setDuplicateRecipePrompt] = useState(null)
+  const [photoUrl, setPhotoUrl] = useState("")
+  const [generatedDishNames, setGeneratedDishNames] = useState([])
+  const [shareFeedback, setShareFeedback] = useState("")
+  const [shareFeedbackIsError, setShareFeedbackIsError] = useState(false)
+  const shareFeedbackTimer = useRef(null)
   const [celebrationKey, setCelebrationKey] = useState(0)
   const [showCelebration, setShowCelebration] = useState(false)
   const celebrationTimer = useRef(null)
 
-  function saveToHistory(recipe, ingredients, language) {
-    setHistory(prev => {
-      const entry = { id: Date.now(), recipe, ingredients, language, savedAt: new Date().toISOString() }
-      return [entry, ...prev].slice(0, 5)
-    })
+  const recipeRequestRef = useRef(0)
+
+  function makeHistoryEntryWithoutPhoto(recipe, ingredients, language, dishName, dishNameEn) {
+    return { id: Date.now(), recipe, ingredients, language, dishName, dishNameEn, photo: null, savedAt: new Date().toISOString() }
   }
 
-  const storeSavedRecipe = useCallback((recipe, ingredients, language) => {
+  function saveToHistory(entry) {
+    setHistory(prev => [entry, ...prev].slice(0, 5))
+  }
+
+  function updateHistoryPhoto(id, photo) {
+    setHistory(prev => prev.map(r => (r.id === id ? { ...r, photo } : r)))
+  }
+
+  const storeSavedRecipe = useCallback((recipe, ingredients, language, dishName, dishNameEn, photo) => {
     setSavedRecipes(prev => {
       if (prev.some(r => r.recipe === recipe)) return prev
-      const entry = { id: Date.now(), recipe, ingredients, language, tags: [], savedAt: new Date().toISOString() }
+      const entry = { id: Date.now(), recipe, ingredients, language, tags: [], dishName, dishNameEn, photo, savedAt: new Date().toISOString() }
       return [entry, ...prev].slice(0, SAVED_LIMIT)
     })
     setCelebrationKey(k => k + 1)
@@ -59,18 +81,18 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     celebrationTimer.current = setTimeout(() => setShowCelebration(false), 4500)
   }, [setSavedRecipes])
 
-  const saveToSaved = useCallback((recipe, ingredients, language) => {
+  const saveToSaved = useCallback((recipe, ingredients, language, dishName, dishNameEn, photo) => {
     if (savedRecipes.length >= SAVED_LIMIT) {
-      setPendingSave({ recipe, ingredients, language })
+      setPendingSave({ recipe, ingredients, language, dishName, dishNameEn, photo })
       return
     }
-    storeSavedRecipe(recipe, ingredients, language)
+    storeSavedRecipe(recipe, ingredients, language, dishName, dishNameEn, photo)
   }, [savedRecipes, storeSavedRecipe])
 
   const handleReplaceForPendingSave = useCallback((id) => {
     setSavedRecipes(prev => prev.filter(r => r.id !== id))
     if (pendingSave) {
-      storeSavedRecipe(pendingSave.recipe, pendingSave.ingredients, pendingSave.language)
+      storeSavedRecipe(pendingSave.recipe, pendingSave.ingredients, pendingSave.language, pendingSave.dishName, pendingSave.dishNameEn, pendingSave.photo)
     }
     setPendingSave(null)
   }, [pendingSave, storeSavedRecipe, setSavedRecipes])
@@ -96,7 +118,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   }, [setSavedRecipes])
   
   const viewRecipeFromList = useCallback((entry) => {
-    setViewingRecipe({ recipe: entry.recipe, ingredients: entry.ingredients, language: entry.language, fromSaved: !isHistory })
+    setViewingRecipe({ recipe: entry.recipe, ingredients: entry.ingredients, language: entry.language, dishName: entry.dishName, dishNameEn: entry.dishNameEn, photo: entry.photo, fromSaved: !isHistory })
   }, [isHistory])
 
   function isValidIngredient(str) {
@@ -192,6 +214,16 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     setHighlightIndex(-1)
   }, [i18n])
 
+  useEffect(() => {
+    if (!(i18n.language || "").toLowerCase().startsWith("zh")) return
+    loadPinyin().then(() => {
+      setInputValue(prev => {
+        if (prev.trim()) filterSuggestions(prev)
+        return prev
+      })
+    })
+  }, [i18n.language, filterSuggestions])
+
   function handleSubmit(e) {
     e.preventDefault()
     if (highlightIndex >= 0 && suggestions[highlightIndex]) {
@@ -263,29 +295,41 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
   }
 
   useEffect(() => {
-    if (ingredientsSection.current && recipe)
-      ingredientsSection.current.scrollIntoView({behavior: "smooth"})
+    if (recipeSection.current && recipe)
+      recipeSection.current.scrollIntoView({behavior: "smooth", block: "start"})
   }, [recipe])
 
+  useEffect(() => {
+    if (!recipe) return
+    const currentIngredients = normalizeIngredients(ingredients)
+    const generatedIngredients = normalizeIngredients(recipeMeta?.ingredients)
+    if (JSON.stringify(currentIngredients) !== JSON.stringify(generatedIngredients)) {
+      setRecipe("")
+      setRecipeMeta(null)
+      setPhotoUrl("")
+      setGeneratedDishNames([])
+    }
+  }, [ingredients, recipe, recipeMeta])
+
   function handleGetRecipe(ingredients) {
-    const normalized = ingredients.map(i => i.trim().toLowerCase()).sort()
+    const normalized = normalizeIngredients(ingredients)
 
     const savedMatch = savedRecipes.find(r => {
-      const rNorm = r.ingredients.map(i => i.trim().toLowerCase()).sort()
+      const rNorm = normalizeIngredients(r.ingredients)
       return JSON.stringify(normalized) === JSON.stringify(rNorm)
     })
     if (savedMatch) {
-      setDuplicatePrompt({ ...savedMatch, source: "saved" })
+      setDuplicateIngredientPrompt({ ...savedMatch, source: "saved" })
       setPendingIngredients(ingredients)
       return
     }
 
     const historyMatch = history.find(r => {
-      const rNorm = r.ingredients.map(i => i.trim().toLowerCase()).sort()
+      const rNorm = normalizeIngredients(r.ingredients)
       return JSON.stringify(normalized) === JSON.stringify(rNorm)
     })
     if (historyMatch) {
-      setDuplicatePrompt({ ...historyMatch, source: "history" })
+      setDuplicateIngredientPrompt({ ...historyMatch, source: "history" })
       setPendingIngredients(ingredients)
       return
     }
@@ -293,38 +337,79 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     getRecipe(ingredients)
   }
 
-  function handleDuplicateChoice(viewSaved) {
-    const { recipe, language, ingredients } = duplicatePrompt || {}
-    if (viewSaved && duplicatePrompt) {
-      setViewingRecipe({ recipe, ingredients, language })
+  function handleDuplicateIngredientChoice(viewSaved) {
+    const { recipe, language, ingredients, dishName, dishNameEn, photo } = duplicateIngredientPrompt || {}
+    if (viewSaved && duplicateIngredientPrompt) {
+      setViewingRecipe({ recipe, ingredients, language, dishName, dishNameEn, photo })
     } else if (pendingIngredients) {
-      getRecipe(pendingIngredients, recipe)
+      getRecipe(pendingIngredients, dishName ? [dishName] : [])
     }
-    setDuplicatePrompt(null)
+    setDuplicateIngredientPrompt(null)
     setPendingIngredients(null)
   }
 
-  async function getRecipe(ingredients, existingRecipe) {
+  function handleViewDuplicateRecipe() {
+    const { recipeMarkdown, ingredients, language, dishName, dishNameEn } = duplicateRecipePrompt
+    const entry = makeHistoryEntryWithoutPhoto(recipeMarkdown, ingredients, language, dishName, dishNameEn)
+    saveToHistory(entry)
+    setGeneratedDishNames(prev => [...prev, dishName].filter(Boolean).slice(-10))
+    setViewingRecipe({ recipe: recipeMarkdown, photo: "", ingredients, language, dishName, dishNameEn })
+    setDuplicateRecipePrompt(null)
+    getDishImage(dishName, dishNameEn)
+      .catch(() => null)
+      .then(photo => {
+        updateHistoryPhoto(entry.id, photo)
+        setViewingRecipe(prev =>
+          prev && prev.recipe === recipeMarkdown ? { ...prev, photo } : prev
+        )
+      })
+  }
+
+  async function getRecipe(ingredients, existingDishes = []) {
     setRecipe("")
     setRecipeMeta(null)
+    setPhotoUrl("")
     setLoading(true)
     setError("")
     try {
       const recipeLanguage = detectInputLanguage(ingredients, i18n.language)
-      let recipeMarkdown = await getRecipeFromGroq(ingredients, recipeLanguage, existingRecipe)
+      let recipeData = await getRecipeFromGroq(ingredients, recipeLanguage, existingDishes)
+      let recipeMarkdown = recipeData.recipe
+      let dishName = recipeData.dishName || extractTitle(recipeMarkdown) || ""
+      let dishNameEn = recipeData.dishNameEn || ""
       if (!recipeMarkdown) throw new Error(t("errorNoRecipe"))
-      if (existingRecipe) {
+      if (existingDishes.length > 0) {
         let retries = 0
         const retryDelays = [800, 1600]
-        while (recipeMarkdown === existingRecipe && retries < 2) {
+        const isDuplicateRecipe = () =>
+          dishName && existingDishes.some(name => name.trim().toLowerCase() === dishName.trim().toLowerCase())
+        while (isDuplicateRecipe() && retries < 2) {
           await new Promise(resolve => setTimeout(resolve, retryDelays[retries] ?? 1600))
-          recipeMarkdown = await getRecipeFromGroq(ingredients, recipeLanguage, existingRecipe)
+          recipeData = await getRecipeFromGroq(ingredients, recipeLanguage, existingDishes)
+          recipeMarkdown = recipeData.recipe
+          dishName = recipeData.dishName || extractTitle(recipeMarkdown) || ""
+          dishNameEn = recipeData.dishNameEn || ""
           retries++
         }
+        if (isDuplicateRecipe()) {
+          setLoading(false)
+          setDuplicateRecipePrompt({ recipeMarkdown, ingredients, language: recipeLanguage, dishName, dishNameEn })
+          return
+        }
       }
+      const requestId = ++recipeRequestRef.current
       setRecipe(recipeMarkdown)
-      setRecipeMeta({ ingredients: [...ingredients], language: recipeLanguage })
-      saveToHistory(recipeMarkdown, ingredients, recipeLanguage)
+      setRecipeMeta({ ingredients: [...ingredients], language: recipeLanguage, dishName, dishNameEn })
+      setGeneratedDishNames([...existingDishes, dishName].filter(Boolean).slice(-10))
+      const entry = makeHistoryEntryWithoutPhoto(recipeMarkdown, ingredients, recipeLanguage, dishName, dishNameEn)
+      saveToHistory(entry)
+      getDishImage(dishName, dishNameEn)
+        .catch(() => null)
+        .then(photo => {
+          if (recipeRequestRef.current !== requestId) return
+          setPhotoUrl(photo)
+          updateHistoryPhoto(entry.id, photo)
+        })
     } catch (err) {
       const isRateLimited = Boolean(err?.cause?.isRateLimited)
       setError(isRateLimited ? t("errorBusy") : (err.message || t("errorNoRecipe")))
@@ -333,7 +418,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     }
   }
 
-  const isDuplicateFromHistory = duplicatePrompt?.source === "history"
+  const isDuplicateIngredientFromHistory = duplicateIngredientPrompt?.source === "history"
   const viewingRecipeFromHistory = !viewingRecipe?.fromSaved
 
   const handleDeleteRecipe = useCallback((recipe) => {
@@ -348,8 +433,22 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
 
   const handleSaveViewingRecipe = useCallback(() => {
     if (!viewingRecipe) return
-    saveToSaved(viewingRecipe.recipe, viewingRecipe.ingredients, viewingRecipe.language)
+    saveToSaved(viewingRecipe.recipe, viewingRecipe.ingredients, viewingRecipe.language, viewingRecipe.dishName, viewingRecipe.dishNameEn, viewingRecipe.photo)
   }, [viewingRecipe, saveToSaved])
+
+  const showShareFeedback = useCallback((message, isError = false) => {
+    setShareFeedback(message)
+    setShareFeedbackIsError(isError)
+    if (shareFeedbackTimer.current) clearTimeout(shareFeedbackTimer.current)
+    shareFeedbackTimer.current = setTimeout(() => setShareFeedback(""), 3000)
+  }, [])
+
+  async function handleShareRecipe() {
+    const title = recipeMeta?.dishName || extractTitle(recipe) || ""
+    const result = await shareRecipe(recipe, title)
+    if (result === "copied") showShareFeedback(t("copiedToClipboard"))
+    else if (!result) showShareFeedback(t("copyFailed"), true)
+  }
 
   const viewerOnSave = viewingRecipe && viewingRecipeFromHistory ? handleSaveViewingRecipe : null
 
@@ -396,6 +495,7 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
       getRecipe={handleGetRecipe}
       removeIngredient={removeIngredient}
       loading={loading}
+      hasRecipe={Boolean(recipe)}
     /> : null}
     {loading && (
       <section className="loading-container" aria-live="polite">
@@ -410,33 +510,73 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
     )}
     {recipe ? (
       <div className="recipe-section">
-        <KittyRecipe recipe={recipe} />
-        {!savedRecipes.some(r => r.recipe === recipe) && recipeMeta && (
-          <button
-            className="save-recipe-btn"
-            onClick={() => saveToSaved(recipe, recipeMeta.ingredients, recipeMeta.language)}
-          >
-            {t("saveRecipe")}
+        <KittyRecipe recipe={recipe} photo={photoUrl} dishName={recipeMeta?.dishName} dishNameEn={recipeMeta?.dishNameEn} sectionRef={recipeSection} />
+        <div className="recipe-actions">
+          <button className="recipe-action-btn" onClick={() => getRecipe(recipeMeta.ingredients, generatedDishNames)} disabled={loading}>
+            <RefreshIcon />
+            {t("regenerate")}
           </button>
-        )}
+          <button className="recipe-action-btn" onClick={() => downloadRecipe(recipe, recipeMeta?.dishName)}>
+            <DownloadIcon />
+            {t("downloadRecipe")}
+          </button>
+          <button className="recipe-action-btn" onClick={handleShareRecipe}>
+            <ShareIcon />
+            {t("shareRecipe")}
+          </button>
+          {shareFeedback && (
+            <p className={shareFeedbackIsError ? "recipe-action-feedback error" : "recipe-action-feedback"}>{shareFeedback}</p>
+          )}
+          {!savedRecipes.some(r => r.recipe === recipe) && recipeMeta && (
+            <button
+              className="save-recipe-btn"
+              onClick={() => saveToSaved(recipe, recipeMeta.ingredients, recipeMeta.language, recipeMeta.dishName, recipeMeta.dishNameEn, photoUrl)}
+            >
+              {t("saveRecipe")}
+            </button>
+          )}
+        </div>
       </div>
     ) : null}
 
-    {duplicatePrompt && (
-      <div className="duplicate-prompt-overlay" onClick={() => { setDuplicatePrompt(null); setPendingIngredients(null) }}>
-        <div className="duplicate-prompt-modal" onClick={e => e.stopPropagation()}>
-          <h3>{t("duplicateTitle")}</h3>
-          <p>{isDuplicateFromHistory ? t("duplicateHistoryMessage") : t("duplicateSavedMessage")}</p>
-          <div className="duplicate-prompt-actions">
-            <button className="duplicate-btn-primary" onClick={() => handleDuplicateChoice(true)}>
-              {isDuplicateFromHistory ? t("duplicateViewHistory") : t("duplicateViewSaved")}
-            </button>
-            <button className="duplicate-btn-secondary" onClick={() => handleDuplicateChoice(false)}>
-              {t("duplicateGenerateNew")}
-            </button>
-          </div>
+    {duplicateIngredientPrompt && (
+      <Modal
+        overlayClassName="duplicate-prompt-overlay"
+        modalClassName="duplicate-prompt-modal"
+        ariaLabel={t("duplicateIngredientTitle")}
+        onClose={() => { setDuplicateIngredientPrompt(null); setPendingIngredients(null) }}
+      >
+        <h3>{t("duplicateIngredientTitle")}</h3>
+        <p>{isDuplicateIngredientFromHistory ? t("duplicateIngredientHistoryMessage") : t("duplicateIngredientSavedMessage")}</p>
+        <div className="duplicate-prompt-actions">
+          <button className="duplicate-btn-primary" onClick={() => handleDuplicateIngredientChoice(true)}>
+            {isDuplicateIngredientFromHistory ? t("duplicateIngredientViewHistory") : t("duplicateIngredientViewSaved")}
+          </button>
+          <button className="duplicate-btn-secondary" onClick={() => handleDuplicateIngredientChoice(false)}>
+            {t("duplicateIngredientGenerateNew")}
+          </button>
         </div>
-      </div>
+      </Modal>
+    )}
+
+    {duplicateRecipePrompt && (
+      <Modal
+        overlayClassName="duplicate-prompt-overlay"
+        modalClassName="duplicate-prompt-modal"
+        ariaLabel={t("duplicateRecipeTitle")}
+        onClose={() => setDuplicateRecipePrompt(null)}
+      >
+        <h3>{t("duplicateRecipeTitle")}</h3>
+        <p>{t("duplicateRecipeMessage")}</p>
+        <div className="duplicate-prompt-actions">
+          <button className="duplicate-btn-primary" onClick={handleViewDuplicateRecipe}>
+            {t("duplicateRecipeView")}
+          </button>
+          <button className="duplicate-btn-secondary" onClick={() => setDuplicateRecipePrompt(null)}>
+            {t("duplicateRecipeCancel")}
+          </button>
+        </div>
+      </Modal>
     )}
 
     {isRecipesModalOpen && (
@@ -465,6 +605,9 @@ export default function Main({ isRecipesModalOpen, onCloseRecipesModal, isHistor
 
     <RecipeViewer
       recipe={viewingRecipe?.recipe}
+      photo={viewingRecipe?.photo}
+      dishName={viewingRecipe?.dishName}
+      dishNameEn={viewingRecipe?.dishNameEn}
       isSaved={viewingRecipe ? viewingRecipeFromHistory && savedRecipes.some(r => r.recipe === viewingRecipe.recipe) : false}
       onSave={viewerOnSave}
       onClose={closeRecipeViewer}

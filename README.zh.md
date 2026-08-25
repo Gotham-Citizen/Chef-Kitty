@@ -80,13 +80,16 @@ npm run preview
 
 ## 功能特性
 
-- **食材自动补全** — 输入时从精选的三语食材列表（`src/ingredients.js`）中显示建议，支持键盘导航；建议始终跟随浏览器/界面语言；无完全匹配时通过 Levenshtein 距离做模糊匹配，可容错拼写错误（如输入 `chiken` 会提示 `chicken`）
+- **食材自动补全** — 输入时从精选的三语食材列表（`src/ingredients.js`）中显示建议，支持键盘导航；界面为中文时建议还会按拼音及首字母匹配（如输入 `qie` 或 `qr` 可匹配 `茄子`/`茄`）；无完全匹配时通过 Levenshtein 距离做模糊匹配，可容错拼写错误（如输入 `chiken` 会提示 `chicken`）
 - **相似食材检测** — 使用 Levenshtein 距离计算相似度，添加新食材时若与已添加食材相似度 ≥ 0.8 会提示重复（如 `tomatos` 会被判定为与 `tomatoes` 重复）
 - **AI 生成食谱** — 至少添加 4 种食材后，点击 **生成食谱**
+- **食谱即时呈现、配图后台加载** — 食谱一经生成立即渲染，菜品照片在后台从 TheMealDB / Wikimedia Commons 异步查找，就绪后自动显示
+- **食谱导出与分享（Markdown）** — 可将任意食谱导出为 `.md` 文件，或通过系统原生分享面板分享：平台支持时直接附加文件；在 Windows 上则会优雅降级为以文本+链接分享，或将 Markdown 复制到剪贴板
 - **食谱历史** — 最近生成的 5 条食谱自动保存到 `localStorage`
 - **收藏食谱** — 最多收藏 50 条食谱；收藏时会触发彩带与猫咪表情包庆祝动画 🎉
 - **食谱标签与筛选** — 可为收藏的食谱添加、编辑、重命名和删除自定义标签（如 `快速`、`辣`），并通过标签进行筛选
 - **重复检测** — 如果同一组食材已生成过食谱，可查看已有食谱或生成一份不同的
+- **弹窗无障碍** — 所有弹窗共享一个 `<Modal>` 组件，具备 `role="dialog"`、Escape 关闭、焦点圈禁与焦点还原；多层嵌套时仅最上层响应键盘
 - **三语界面与 AI 回复** — 界面跟随浏览器语言，AI 会使用你输入食材的语言回复
 
 ## 工作原理
@@ -94,8 +97,8 @@ npm run preview
 1. 在表单中输入食材并添加到列表中（带自动补全建议）。
 2. 当食材达到 4 种后，点击 **生成食谱**。
 3. 应用将食材发送到 Cloudflare Worker，Worker 将请求代理至 Groq API（`openai/gpt-oss-20b`），并使用严格模式（Structured Outputs）保证响应符合 JSON Schema。
-4. AI 返回 Markdown 格式的食谱，渲染在页面上。
-5. 食谱会自动保存到历史记录；你可以收藏喜欢的食谱并随时查看。
+4. AI 返回 Markdown 格式的食谱，立即渲染在页面上；匹配的菜品照片通过 `src/utils/dishImage.js` 异步查找，就绪后显示。
+5. 食谱会立即保存到历史记录——照片查找到后会补写进该条目；你可以收藏喜欢的食谱并随时查看。
 
 ## 技术栈
 
@@ -104,6 +107,7 @@ npm run preview
 - **React 19** — UI 组件与 Hooks
 - **Vite** — 开发服务器与构建工具
 - **react-markdown** — 将 AI 返回的 Markdown 渲染为 HTML
+- **pinyin-pro** — 中文食材自动补全的拼音与首字母匹配（如输入 `qie` 或 `qr` 可匹配 `茄子`/`茄` 条目）；词典 chunk 仅在界面语言为中文时按需加载
 - **i18next + react-i18next** — 完整的国际化框架，支持浏览器语言检测；翻译文件位于 `src/utils/locales/{en,zh,es}/translation.js`
 
 ### 后端 / 基础设施
@@ -127,6 +131,7 @@ npm run preview
 │   ├── ai.js                   # API 客户端（向 Worker 发起 fetch）
 │   ├── ingredients.js          # 三语自动补全食材列表
 │   └── utils/
+│       ├── dishImage.js         # 菜品照片查找（TheMealDB → Wikimedia Commons）
 │       ├── i18n.js             # i18next 初始化 + detectInputLanguage()
 │       ├── levenshtein.js      # Levenshtein 距离、相似度计算
 │       ├── pinyin.js           # 中文自动补全的拼音/首字母转换
@@ -140,6 +145,7 @@ npm run preview
 │   ├── Main.jsx                # 食材表单、状态与食谱逻辑
 │   ├── IngredientsList.jsx     # 食材列表与"生成食谱"按钮
 │   ├── KittyRecipe.jsx         # 食谱渲染组件
+│   ├── Modal.jsx               # 共享无障碍弹窗组件（Escape、焦点圈禁、焦点还原）
 │   ├── RecipesModal.jsx         # 历史/收藏食谱弹窗
 │   ├── SavedLimitModal.jsx     # 收藏数量已满时的替换弹窗
 │   ├── RecipeViewer.jsx        # 全屏食谱查看弹窗
@@ -158,7 +164,7 @@ npm run preview
     ├── demo.png
     ├── demo.mp4
     ├── demo-video.gif
-    └── cat-meme/               # 庆祝动画使用的猫咪表情包图片
+    └── cat-meme/               # 庆祝动画使用的猫咪表情包（动画 WebP）
 ```
 
 ## 语言支持

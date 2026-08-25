@@ -145,6 +145,10 @@ ul.ingredients-list {
     margin-bottom: 48px;
 }
 
+.ingredients-section.with-recipe ul.ingredients-list {
+    margin-bottom: 12px;
+}
+
 ul.ingredients-list > li {
     color: #475467;
     line-height: 28px;
@@ -268,7 +272,7 @@ ul.ingredients-list > li::before {
 }
 
 .recipe-section {
-    margin-top: 24px;
+    margin-top: 16px;
 }
 
 .save-recipe-btn {
@@ -290,6 +294,86 @@ ul.ingredients-list > li::before {
 
 .save-recipe-btn:hover {
     background: #b86346;
+}
+
+.recipe-photo {
+    display: block;
+    width: 100%;
+    max-width: 480px;
+    max-height: 320px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin: 0 0 16px;
+}
+
+.recipe-viewer-photo {
+    display: block;
+    width: 100%;
+    max-height: 340px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin: 0 0 20px;
+}
+
+.recipe-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.recipe-actions .save-recipe-btn {
+    margin-top: 0;
+}
+
+.recipe-viewer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-top: 16px;
+}
+
+.recipe-viewer-actions .save-recipe-btn {
+    margin-top: 0;
+}
+
+.recipe-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #D1D5DB;
+    border-radius: 6px;
+    background: white;
+    color: #475467;
+    padding: 10px 20px;
+    font-family: Inter, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.recipe-action-btn:hover {
+    color: #D17557;
+    border-color: #D17557;
+    background: #FAFAF8;
+}
+
+.recipe-action-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.recipe-action-feedback {
+    margin: 0;
+    color: #16a34a;
+    font-size: 0.85rem;
+}
+
+.recipe-action-feedback.error {
+    color: #B91C1C;
 }
 
 .recipes-modal-overlay {
