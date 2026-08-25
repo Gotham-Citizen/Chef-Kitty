@@ -1,16 +1,21 @@
-import { SYSTEM_PROMPT_TEMPLATES, EXISTING_RECIPE_TEMPLATES, USER_MESSAGE_TEMPLATES} from './prompts.js'
+import { SYSTEM_PROMPT_TEMPLATES, EXISTING_DISH_TEMPLATES, USER_MESSAGE_TEMPLATES} from './prompts.js'
+
+function extractTitle(markdown) {
+  const match = String(markdown || '').match(/^\s*#{1,6}\s+(.+)$/m)
+  return match ? match[1].trim() : ''
+}
 
 function buildUserMessage(ingredients, language) {
   const template = USER_MESSAGE_TEMPLATES[language] || USER_MESSAGE_TEMPLATES.en
   return template(ingredients)
 }
 
-function buildSystemPrompt(language, existingRecipe) {
+function buildSystemPrompt(language, existingDishes) {
   const promptTemplate = SYSTEM_PROMPT_TEMPLATES[language] || SYSTEM_PROMPT_TEMPLATES.en
   let prompt = promptTemplate()
-  if (existingRecipe) {
-    const existingTemplate = EXISTING_RECIPE_TEMPLATES[language] || EXISTING_RECIPE_TEMPLATES.en
-    prompt += existingTemplate(existingRecipe)
+  if (existingDishes && existingDishes.length > 0) {
+    const existingTemplate = EXISTING_DISH_TEMPLATES[language] || EXISTING_DISH_TEMPLATES.en
+    prompt += existingTemplate(existingDishes)
   }
   return prompt
 }
@@ -82,7 +87,7 @@ export default {
             const rawBody = await request.clone().text()
             console.log('Raw body received:', rawBody)
 
-            const { ingredients, language, existingRecipe } = await request.json()
+            const { ingredients, language, existingDishes } = await request.json()
             console.log('Parsed ingredients:', JSON.stringify(ingredients))
 
             if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
@@ -95,7 +100,7 @@ export default {
             const groqResponse = await callGroq(env, {
                 model: 'openai/gpt-oss-20b',
                 messages: [
-                    { role: 'system', content: buildSystemPrompt(language || 'en', existingRecipe) },
+                    { role: 'system', content: buildSystemPrompt(language || 'en', existingDishes) },
                     { role: 'user', content: buildUserMessage(ingredients, language || 'en') },
                 ],
                 max_tokens: 4096,
@@ -108,8 +113,10 @@ export default {
                             type: "object",
                             properties: {
                                 recipe: { type: "string", description: "The complete recipe as a single markdown string" },
+                                dishName: { type: "string", description: "A short, clean name of the dish in the user's language" },
+                                dishNameEn: { type: "string", description: "A short, clean English name of the same dish" },
                             },
-                            required: ["recipe"],
+                            required: ["recipe", "dishName", "dishNameEn"],
                             additionalProperties: false,
                         },
                     },
@@ -131,8 +138,10 @@ export default {
             const completion = await groqResponse.json()
             const parsed = JSON.parse(completion.choices[0].message.content)
             const recipe = parsed.recipe
+            const dishName = (parsed.dishName || '').trim() || extractTitle(recipe)
+            const dishNameEn = (parsed.dishNameEn || '').trim() || dishName
 
-            return new Response(JSON.stringify({ recipe }), {
+            return new Response(JSON.stringify({ recipe, dishName, dishNameEn }), {
                 status: 200,
                 headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             })

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
-export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef}) {
+export default function IngredientsList({ingredients, getRecipe, removeIngredient, loading, sectionRef, hasRecipe}) {
   const { t } = useTranslation()
     const ingredientsListItems = ingredients.map((ingredientItem, index) => (
       <li key={`${ingredientItem}-${index}`}>
@@ -16,12 +16,13 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
     ))
 
   return(
-    <section>
+    <section className={hasRecipe ? "ingredients-section with-recipe" : "ingredients-section"}>
       <h2>{t("ingredientsOnHand")}</h2>
       <ul className="ingredients-list" aria-live="polite">
         {ingredientsListItems}
       </ul>
-      {ingredients.length > 3 ? 
+      {ingredients.length <= 3 ? 
+      <p className="min-ingredients-hint">{t("minIngredients", { n: 4 })}</p> : !hasRecipe ?
       <div className="get-recipe-container">
         <div ref={sectionRef}>
           <h3>{t("readyForRecipe")}</h3>
@@ -33,7 +34,7 @@ export default function IngredientsList({ingredients, getRecipe, removeIngredien
         >
           {loading ? t("loading") : t("getRecipe")}
         </button>
-      </div> : <p className="min-ingredients-hint">{t("minIngredients", { n: 4 })}</p>}
+      </div> : null}
     </section>
   )
 }

@@ -2,13 +2,13 @@
   en: () =>
     `You are an assistant that receives a list of ingredients that a user has and suggests a recipe they could make with some or all of those ingredients. You don't need to use every ingredient they mention in your recipe. The recipe can include additional ingredients they didn't mention, but try not to include too many extra ingredients. Format the recipe in markdown to make it easier to render to a web page.
 
-RESPONSE FORMAT: Respond with a JSON object containing a single "recipe" field. The "recipe" field must hold the entire recipe formatted as one markdown string (title, ingredients, steps and notes as markdown).
+RESPONSE FORMAT: Respond with a JSON object containing three fields: "recipe", "dishName" and "dishNameEn". The "recipe" field must hold the entire recipe formatted as one markdown string (title, ingredients, steps and notes as markdown). The "dishName" field must be a short, clean name of the dish in the user's language (e.g. "Pollo salteado"), with no extra words or punctuation. The "dishNameEn" field must be a short, clean English name of the SAME dish (e.g. "Chicken Stir-Fry"), with no extra words or punctuation.
 
 LANGUAGE RULE: Your ENTIRE response must be written in English. Do not mix in other languages. The title, ingredient list, steps, quantities and units must all be in English.`,
   zh: () =>
     `你是一个助手，接收用户提供的食材列表，并推荐一道可以用其中部分或全部食材制作的菜肴。你不需要使用用户提到的所有食材。食谱可以包含用户未提及的额外食材，但尽量不要太多种。请用 Markdown 格式输出食谱，以便在网页上更好地渲染显示。
 
-响应格式：请用一个 JSON 对象响应，其中只包含一个 "recipe" 字段。该字段必须包含完整食谱，格式为一段 Markdown 字符串（标题、食材清单、步骤和备注）。
+响应格式：请用一个 JSON 对象响应，其中包含三个字段 "recipe"、"dishName" 和 "dishNameEn"。"recipe" 字段必须包含完整食谱，格式为一段 Markdown 字符串（标题、食材清单、步骤和备注）。"dishName" 字段必须是用户语言中菜品的简短名称（例如「姜葱炒鸡」），不要包含多余的字词或标点。"dishNameEn" 字段必须是同一个菜品的简短英文名称（例如 "Ginger Scallion Chicken"），不要包含多余的字词或标点。
 
 【中文输出要求——必须严格遵守】
 1. 整个 recipe 字段的内容必须全部使用简体中文书写。标题、食材清单、步骤、备注、数量、标点全部用中文。
@@ -24,18 +24,18 @@ LANGUAGE RULE: Your ENTIRE response must be written in English. Do not mix in ot
   es: () =>
     `Eres un asistente que recibe una lista de ingredientes que tiene un usuario y le sugieres una receta que podría preparar con algunos o todos esos ingredientes. No necesitas usar todos los ingredientes que mencione. La receta puede incluir ingredientes adicionales que no mencionó, pero intenta no añadir demasiados extras. Formatea la receta en markdown para que sea más fácil de renderizar en una página web.
 
-FORMATO DE RESPUESTA: Responde con un objeto JSON con un único campo "recipe". El campo "recipe" debe contener la receta completa como un solo string en markdown (título, lista de ingredientes, pasos y notas).
+FORMATO DE RESPUESTA: Responde con un objeto JSON con tres campos: "recipe", "dishName" y "dishNameEn". El campo "recipe" debe contener la receta completa como un solo string en markdown (título, lista de ingredientes, pasos y notas). El campo "dishName" debe ser el nombre corto y limpio del plato en el idioma del usuario (por ejemplo, "Pollo salteado"), sin palabras ni puntuación extra. El campo "dishNameEn" debe ser el nombre corto y limpio en inglés del MISMO plato (por ejemplo, "Chicken Stir-Fry"), sin palabras ni puntuación extra.
 
 REGLA DE IDIOMA: Tu respuesta COMPLETA debe estar escrita en español, sin excepción. Prohibido escribir en inglés o mezclar idiomas. El título, la lista de ingredientes, los pasos y las notas deben estar íntegramente en español.`,
 }
 
-export const EXISTING_RECIPE_TEMPLATES = {
-  en: (existingRecipe) =>
-    `\n\nThe following recipe has already been suggested for these ingredients. You MUST suggest a DIFFERENT recipe. Do NOT repeat the same recipe or a similar variation.\n\n---EXISTING RECIPE---\n${existingRecipe}\n---END EXISTING RECIPE---\n\nEven if the existing recipe is written in another language, your new recipe MUST be entirely in English.`,
-  zh: (existingRecipe) =>
-    `\n\n以下食谱已针对这些食材被推荐过。你必须推荐一个不同的食谱。不要重复相同的食谱或类似的变体。\n\n---已推荐的食谱---\n${existingRecipe}\n---已推荐的食谱结束---\n\n即使已有食谱是用其他语言写的，你的新食谱也必须全部用简体中文撰写。禁止出现任何英文单词或英文字母；单位可以使用 g、ml、tbsp 等英文单位或中文单位（克、毫升、汤匙等），但禁止使用 "tsp"，请用「小勺」或「茶匙」代替。`,
-  es: (existingRecipe) =>
-    `\n\nLa siguiente receta ya ha sido sugerida para estos ingredientes. DEBES sugerir una receta DIFERENTE. No repitas la misma receta ni una variación similar.\n\n---RECETA EXISTENTE---\n${existingRecipe}\n---FIN DE LA RECETA EXISTENTE---\n\nAunque la receta existente esté en otro idioma, tu nueva receta debe estar íntegramente en español, sin palabras en inglés.`,
+export const EXISTING_DISH_TEMPLATES = {
+  en: (existingDishes) =>
+    `\n\nThe following dishes have already been suggested for these ingredients: ${existingDishes.join(', ')}. You MUST suggest a DIFFERENT dish that is NOT in this list. Do not repeat any of these dishes or similar variations.\n\nEven if the existing dish names are in another language, your new recipe MUST be entirely in English.`,
+  zh: (existingDishes) =>
+    `\n\n以下菜品已针对这些食材被推荐过：${existingDishes.join('、')}。你必须推荐一个不在这份清单中的不同菜品。不要重复这些菜品或类似的变体。\n\n即使已有菜品名称是用其他语言写的，你的新食谱也必须全部用简体中文撰写。禁止出现任何英文单词或英文字母；单位可以使用 g、ml、tbsp 等英文单位或中文单位（克、毫升、汤匙等），但禁止使用 "tsp"，请用「小勺」或「茶匙」代替。`,
+  es: (existingDishes) =>
+    `\n\nLos siguientes platos ya han sido sugeridos para estos ingredientes: ${existingDishes.join(', ')}. DEBES sugerir un plato DIFERENTE que no esté en esta lista. No repitas estos platos ni variaciones similares.\n\nAunque los nombres de platos existentes estén en otro idioma, tu nueva receta debe estar íntegramente en español, sin palabras en inglés.`,
 }
 
 export const USER_MESSAGE_TEMPLATES = {
